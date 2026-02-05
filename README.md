@@ -37,6 +37,12 @@ This adapter runs each query **once** (when the component mounts). The UI does n
 
 The `client` prop accepts any object with `query(ref, args)` and `mutation(ref, args)` returning promises. The result of `convexTest(schema, modules)` (and `.withIdentity(...)`) satisfies this.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow.
+
+AI agents: See [CLAUDE.md](CLAUDE.md) for quick reference.
+
 ## Versioning
 
 Releases follow [semantic versioning](https://semver.org/). See [CHANGELOG.md](./CHANGELOG.md) for release history.
