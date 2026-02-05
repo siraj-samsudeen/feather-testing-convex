@@ -1,6 +1,6 @@
 {
   "name": "convex-test-provider",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "React provider that adapts convex-test's one-shot client for use with ConvexProvider, so useQuery/useMutation work in tests.",
   "license": "MIT",
   "keywords": [
