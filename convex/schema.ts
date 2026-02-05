@@ -5,4 +5,10 @@ export default defineSchema({
   items: defineTable({
     text: v.string(),
   }),
+  users: defineTable({}),
+  todos: defineTable({
+    text: v.string(),
+    completed: v.boolean(),
+    userId: v.id("users"),
+  }),
 });
