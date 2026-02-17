@@ -72,13 +72,14 @@ export function renderWithConvex(ui: ReactElement, client: unknown) {
 export function renderWithConvexAuth(
   ui: ReactElement,
   client: unknown,
-  options?: { authenticated?: boolean }
+  options?: { authenticated?: boolean; signInError?: Error }
 ) {
   return render(ui, {
     wrapper: ({ children }: { children: ReactNode }) => (
       <ConvexTestAuthProvider
         client={client as any}
         authenticated={options?.authenticated ?? true}
+        signInError={options?.signInError}
       >
         {children}
       </ConvexTestAuthProvider>
