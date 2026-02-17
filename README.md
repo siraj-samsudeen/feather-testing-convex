@@ -169,9 +169,17 @@ To see updated data in the UI, unmount and remount the component (or call `reren
 
 ### Nested `runQuery`/`runMutation` lose auth context
 
-When a Convex function calls `ctx.runQuery()` or `ctx.runMutation()`, the nested call does not inherit the caller's auth identity. This is an [upstream limitation in convex-test](https://github.com/get-convex/convex-test), not in this package.
+When a Convex function calls `ctx.runQuery()` or `ctx.runMutation()`, the nested call does not inherit the caller's auth identity. This is an [upstream limitation in convex-test](https://github.com/get-convex/convex-test) ([issue #50](https://github.com/get-convex/convex-test/issues/50)), not in this package.
 
-**Workaround:** Avoid nested `runQuery`/`runMutation` in functions under test, or pass the user ID as an explicit argument instead of relying on `ctx.auth.getUserIdentity()` inside nested calls.
+**Root cause:** In `convex-test`, the `queryFromPath` and `mutationFromPath` handlers spread `{ ...ctx, auth }` but do not override `ctx.runQuery`/`ctx.runMutation` with auth-aware versions. Actions (`actionFromPath`) already do this correctly.
+
+**Workarounds:**
+
+1. **Pass userId as an explicit argument** (recommended) — create `internalQuery`/`internalMutation` variants that accept `userId` instead of reading `ctx.auth.getUserIdentity()` inside nested calls.
+2. **Use `patch-package`** — apply a 2-line fix to `node_modules/convex-test/dist/index.js`:
+   - In `queryFromPath`: change `{ ...ctx, auth }` to `{ ...ctx, auth, runQuery: byType.query }`
+   - In `runTransaction`: change `{ ...ctx, auth, ...extraCtx }` to `{ ...ctx, auth, runQuery: byType.query, runMutation: byType.mutation, ...extraCtx }`
+3. **Use actions for orchestration** — actions already propagate auth correctly to nested calls (note: different transactional semantics).
 
 ## Types
 

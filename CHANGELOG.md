@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Limitations section in README — documents one-shot query model and upstream `convex-test` auth context limitation (#7)
+- Limitations section in README — documents one-shot query model and upstream `convex-test` auth context limitation with workarounds and upstream issue link (#7)
 
 ## [0.3.0]
 
