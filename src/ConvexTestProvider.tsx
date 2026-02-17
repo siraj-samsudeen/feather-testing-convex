@@ -24,20 +24,28 @@ export function ConvexTestProvider({
   children: ReactNode;
   authenticated?: boolean;
 }) {
-  const cache = new Map<string, unknown>();
+  // Two-level cache: query reference identity → serialized args → result.
+  // Avoids collisions between different query functions whose proxies all
+  // stringify to "{}" (see issue #2). Approach from PR #3.
+  const cache = new Map<unknown, Map<string, unknown>>();
 
   const fakeClient = {
     watchQuery: (query: unknown, args: unknown) => {
-      const key = JSON.stringify({ query, args });
+      let queryCache = cache.get(query);
+      if (!queryCache) {
+        queryCache = new Map<string, unknown>();
+        cache.set(query, queryCache);
+      }
+      const argsKey = JSON.stringify(args ?? {});
       let subscriber: (() => void) | null = null;
 
       client.query(query as never, args ?? {}).then((result) => {
-        cache.set(key, result);
+        queryCache.set(argsKey, result);
         subscriber?.();
       });
 
       return {
-        localQueryResult: () => cache.get(key),
+        localQueryResult: () => queryCache.get(argsKey),
         onUpdate: (cb: () => void) => {
           subscriber = cb;
           return () => { subscriber = null; };

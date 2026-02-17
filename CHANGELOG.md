@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Cache collision when multiple `useQuery` calls share a component — different query references (e.g. `api.items.list` and `api.todos.list`) now get separate cache entries instead of overwriting each other (#2)
+
+### Changed
+
+- `signIn`/`signOut` from `useAuthActions()` now toggle auth state in tests (previously no-ops) (#6)
+- Added `signInError` option to `renderWithConvexAuth` for simulating sign-in failures (#6)
+
+### Added
+
+- Limitations section in README — documents one-shot query model and upstream `convex-test` auth context limitation (#7)
+
 ## [0.3.0]
 
 ### Added
