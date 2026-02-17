@@ -60,11 +60,11 @@ export function createConvexTest(
   });
 }
 
-export function wrapWithConvex(children: ReactNode, client: ConvexTestClient) {
-  return <ConvexTestProvider client={client}>{children}</ConvexTestProvider>;
+export function wrapWithConvex(children: ReactNode, client: unknown) {
+  return <ConvexTestProvider client={client as ConvexTestClient}>{children}</ConvexTestProvider>;
 }
 
-export function renderWithConvex(ui: ReactElement, client: ConvexTestClient) {
+export function renderWithConvex(ui: ReactElement, client: unknown) {
   return render(ui, {
     wrapper: ({ children }: { children: ReactNode }) => wrapWithConvex(children, client),
   });
@@ -72,13 +72,13 @@ export function renderWithConvex(ui: ReactElement, client: ConvexTestClient) {
 
 export function renderWithConvexAuth(
   ui: ReactElement,
-  client: ConvexTestClient,
+  client: unknown,
   options?: { authenticated?: boolean; signInError?: Error }
 ) {
   return render(ui, {
     wrapper: ({ children }: { children: ReactNode }) => (
       <ConvexTestAuthProvider
-        client={client}
+        client={client as ConvexTestClient}
         authenticated={options?.authenticated ?? true}
         signInError={options?.signInError}
       >
