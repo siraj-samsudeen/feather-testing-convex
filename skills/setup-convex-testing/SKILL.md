@@ -1,6 +1,10 @@
 ---
 name: setup-convex-testing
 description: Set up integration testing for React + Convex + Vite projects. Enables testing React components with real Convex backend function execution.
+license: MIT
+metadata:
+  author: siraj-samsudeen
+  version: "0.3"
 ---
 
 # Set Up Convex Testing
@@ -62,6 +66,8 @@ export { renderWithConvex };
 
 ## 5. First Test
 
+Pick one example below to verify your setup. You don't need both.
+
 ### Backend-only test (query + seed)
 
 ```typescript
@@ -100,6 +106,14 @@ describe("TodoList", () => {
   });
 });
 ```
+
+## 6. Verify Setup
+
+```bash
+npx vitest run
+```
+
+One passing test confirms the setup is correct.
 
 ---
 

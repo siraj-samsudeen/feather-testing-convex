@@ -64,4 +64,4 @@ npm run test:coverage
 - Target **100% coverage** on production files — achievable with integration tests
 - Exclude generated code (`convex/_generated/`), config files, and test helpers
 - Integration tests often give backend coverage for free — check before writing separate backend tests
-- Use `/feather:setup-tdd-guard` to enforce coverage via pre-commit hooks
+- Enforce coverage thresholds in CI to prevent regressions

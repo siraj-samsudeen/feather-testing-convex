@@ -1,6 +1,10 @@
 ---
 name: add-convex-auth-testing
 description: Add auth testing to an existing Convex test setup. Test <Authenticated>, <Unauthenticated>, useConvexAuth(), useAuthActions(), signIn/signOut.
+license: MIT
+metadata:
+  author: siraj-samsudeen
+  version: "0.3"
 ---
 
 # Add Auth Testing to Convex Tests
@@ -61,6 +65,14 @@ export { renderWithConvex, renderWithConvexAuth };
 ```
 
 ## 4. Usage
+
+| Scenario | Example below |
+|----------|---------------|
+| Component assumes logged in | Authenticated |
+| Component shows login prompt | Unauthenticated |
+| Test sign-out flow | signIn / signOut |
+| Test error handling | Simulate errors |
+| Custom render wrapper | Direct provider |
 
 ### Authenticated (default)
 
@@ -132,6 +144,14 @@ import { ConvexTestAuthProvider } from "convex-test-provider";
   <YourComponent />
 </ConvexTestAuthProvider>
 ```
+
+## 5. Verify
+
+```bash
+npx vitest run
+```
+
+Auth tests should pass. If you see `ERR_PACKAGE_PATH_NOT_EXPORTED`, the vitest plugin is missing (step 2).
 
 ---
 
