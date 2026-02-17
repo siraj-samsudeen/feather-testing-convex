@@ -1,6 +1,6 @@
 import { test as baseTest } from "vitest";
 import { convexTest } from "convex-test";
-import { ConvexTestProvider } from "./ConvexTestProvider.js";
+import { ConvexTestProvider, type ConvexTestClient } from "./ConvexTestProvider.js";
 import { ConvexTestAuthProvider } from "./ConvexTestAuthProvider.js";
 import { render } from "@testing-library/react";
 import type { ReactNode, ReactElement } from "react";
@@ -59,11 +59,11 @@ export function createConvexTest(
   });
 }
 
-export function wrapWithConvex(children: ReactNode, client: unknown) {
-  return <ConvexTestProvider client={client as any}>{children}</ConvexTestProvider>;
+export function wrapWithConvex(children: ReactNode, client: ConvexTestClient) {
+  return <ConvexTestProvider client={client}>{children}</ConvexTestProvider>;
 }
 
-export function renderWithConvex(ui: ReactElement, client: unknown) {
+export function renderWithConvex(ui: ReactElement, client: ConvexTestClient) {
   return render(ui, {
     wrapper: ({ children }: { children: ReactNode }) => wrapWithConvex(children, client),
   });
@@ -71,13 +71,13 @@ export function renderWithConvex(ui: ReactElement, client: unknown) {
 
 export function renderWithConvexAuth(
   ui: ReactElement,
-  client: unknown,
+  client: ConvexTestClient,
   options?: { authenticated?: boolean; signInError?: Error }
 ) {
   return render(ui, {
     wrapper: ({ children }: { children: ReactNode }) => (
       <ConvexTestAuthProvider
-        client={client as any}
+        client={client}
         authenticated={options?.authenticated ?? true}
         signInError={options?.signInError}
       >

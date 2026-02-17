@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useCallback, useMemo, useRef, type ReactNode } from "react";
 import { ConvexProvider, ConvexProviderWithAuth } from "convex/react";
 
 /** Minimal client shape: one-shot query and mutation. Matches convex-test client. */
@@ -27,14 +27,23 @@ export function ConvexTestProvider({
   // Two-level cache: query reference identity → serialized args → result.
   // Avoids collisions between different query functions whose proxies all
   // stringify to "{}" (see issue #2). Approach from PR #3.
-  const cache = new Map<unknown, Map<string, unknown>>();
+  // useRef so cache survives re-renders (e.g. auth state toggle).
+  const cache = useRef(new Map<unknown, Map<string, unknown>>());
 
-  const fakeClient = {
+  // Ref for authenticated so fakeClient.setAuth reads the latest value
+  // without needing authenticated in the useMemo dependency array.
+  const authenticatedRef = useRef(authenticated);
+  authenticatedRef.current = authenticated;
+
+  // Stable reference — only changes when the client prop itself changes.
+  // ConvexProviderWithAuth puts client in useEffect deps; an unstable
+  // reference would trigger setAuth/clearAuth cycles every render.
+  const fakeClient = useMemo(() => ({
     watchQuery: (query: unknown, args: unknown) => {
-      let queryCache = cache.get(query);
+      let queryCache = cache.current.get(query);
       if (!queryCache) {
         queryCache = new Map<string, unknown>();
-        cache.set(query, queryCache);
+        cache.current.set(query, queryCache);
       }
       const argsKey = JSON.stringify(args ?? {});
       let subscriber: (() => void) | null = null;
@@ -55,12 +64,26 @@ export function ConvexTestProvider({
     mutation: (mutation: unknown, args: unknown) => {
       return client.mutation(mutation as never, args ?? {});
     },
-    // Stubs for ConvexProviderWithAuth — immediately report auth state
+    // Synchronous — real client calls onChange async, but ConvexProviderWithAuth
+    // calls setAuth inside useEffect (committed state), so sync is safe here.
     setAuth: (_fetchToken: unknown, onChange: (isAuth: boolean) => void) => {
-      onChange(authenticated ?? false);
+      onChange(authenticatedRef.current ?? false);
     },
     clearAuth: () => {},
-  };
+  }), [client]);
+
+  // Stable fetchAccessToken — ConvexProviderWithAuth puts this in useEffect
+  // deps. Unstable reference would trigger setAuth/clearAuth every render,
+  // pausing/resuming websockets. Matches Convex's own Auth0 provider pattern.
+  const fetchAccessToken = useCallback(async () => null, []);
+
+  // Only changes when authenticated changes — which is when we actually
+  // want ConvexProviderWithAuth to re-run its auth effects.
+  const useAuth = useCallback(() => ({
+    isLoading: false,
+    isAuthenticated: authenticated ?? false,
+    fetchAccessToken,
+  }), [authenticated, fetchAccessToken]);
 
   if (authenticated === undefined) {
     return (
@@ -69,12 +92,6 @@ export function ConvexTestProvider({
       </ConvexProvider>
     );
   }
-
-  const useAuth = () => ({
-    isLoading: false,
-    isAuthenticated: authenticated,
-    fetchAccessToken: async () => null,
-  });
 
   return (
     <ConvexProviderWithAuth client={fakeClient as never} useAuth={useAuth}>
