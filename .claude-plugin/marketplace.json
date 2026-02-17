@@ -1,0 +1,24 @@
+{
+  "name": "convex-test-provider-skills",
+  "owner": {
+    "name": "Siraj Samsudeen",
+    "email": "siraj@sirajsamsudeen.com"
+  },
+  "metadata": {
+    "description": "Agent skills for testing React + Convex applications with convex-test-provider",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "convex-testing",
+      "description": "Set up and use convex-test-provider for integration testing React + Convex applications. Includes setup, auth testing, and testing patterns.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/setup-convex-testing",
+        "./skills/add-convex-auth-testing",
+        "./skills/convex-test-patterns"
+      ]
+    }
+  ]
+}

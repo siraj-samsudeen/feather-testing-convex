@@ -9,7 +9,68 @@ npm i convex convex-test react
 npm i -D convex-test-provider
 ```
 
+## Quick Start
+
+Three files to get from zero to a working test:
+
+**1. `vitest.config.ts`**
+
+```typescript
+import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    environment: "jsdom",
+    environmentMatchGlobs: [["convex/**", "edge-runtime"]],
+    server: { deps: { inline: ["convex-test"] } },
+    globals: true,
+    setupFiles: ["./src/test-setup.ts"],
+  },
+});
+```
+
+**2. `convex/test.setup.ts`**
+
+```typescript
+/// <reference types="vite/client" />
+import { createConvexTest, renderWithConvex } from "convex-test-provider";
+import schema from "./schema";
+
+export const modules = import.meta.glob("./**/!(*.*.*)*.*s");
+export const test = createConvexTest(schema, modules);
+export { renderWithConvex };
+```
+
+**3. `src/test-setup.ts`**
+
+```typescript
+import "@testing-library/jest-dom/vitest";
+```
+
+**First test:**
+
+```tsx
+import { describe, expect } from "vitest";
+import { screen } from "@testing-library/react";
+import { test, renderWithConvex } from "../../convex/test.setup";
+import { TodoList } from "./TodoList";
+
+describe("TodoList", () => {
+  test("shows seeded data", async ({ client, seed }) => {
+    await seed("todos", { text: "Buy milk", completed: false });
+    renderWithConvex(<TodoList />, client);
+    expect(await screen.findByText("Buy milk")).toBeInTheDocument();
+  });
+});
+```
+
+For auth testing, see [Auth Testing](#auth-testing) below.
+
 ## Usage
+
+> For the recommended setup, see [Quick Start](#quick-start) above. This section shows the low-level API.
 
 1. Create a convex-test client: `convexTest(schema, modules)`.
 2. Wrap your component with `ConvexTestProvider` and pass the client:
@@ -72,22 +133,29 @@ test("creates a todo", async ({ client, seed }) => {
 | Fixture | Description |
 |---------|-------------|
 | `testClient` | Raw convex-test client (unauthenticated) |
-| `userId` | Current user's ID (user auto-created) |
-| `client` | Authenticated client for the current user |
-| `seed(table, data)` | Insert data, auto-fills `userId` field |
-| `createUser()` | Create another authenticated user |
+| `userId` | ID of an auto-created user (string) |
+| `client` | Authenticated client for the auto-created user |
+| `seed(table, data)` | Insert a document. Auto-fills `userId` unless `data` includes an explicit `userId` (explicit wins). Returns the document ID. |
+| `createUser()` | Create another user, return authenticated client with `.userId` property. |
 
 ### Multi-user Test Example
 
 ```typescript
-test("users only see their own todos", async ({ client, createUser }) => {
+test("users only see their own todos", async ({ client, seed, createUser }) => {
   // Alice creates a todo
   await client.mutation(api.todos.create, { text: "Alice's todo" });
 
-  // Bob can't see Alice's todo
+  // Bob creates a todo (seed with explicit userId)
   const bob = await createUser();
+  await seed("todos", { text: "Bob's todo", completed: false, userId: bob.userId });
+
+  // Each user only sees their own
+  const aliceTodos = await client.query(api.todos.list, {});
+  expect(aliceTodos).toHaveLength(1);
+
   const bobTodos = await bob.query(api.todos.list, {});
-  expect(bobTodos).toHaveLength(0);
+  expect(bobTodos).toHaveLength(1);
+  expect(bobTodos[0].text).toBe("Bob's todo");
 });
 ```
 
@@ -109,9 +177,28 @@ export const test = createConvexTest(schema, modules, {
 
 Test components that use `<Authenticated>`, `<Unauthenticated>`, `useConvexAuth()`, and `useAuthActions()` — without mocking.
 
+### Prerequisites
+
 ```bash
 npm i -D @convex-dev/auth
 ```
+
+Add the vitest plugin to resolve an internal `@convex-dev/auth` import ([upstream fix requested](https://github.com/get-convex/convex-auth/issues/281)):
+
+```typescript
+// vitest.config.ts
+import { convexTestProviderPlugin } from "convex-test-provider/vitest-plugin";
+
+export default defineConfig({
+  plugins: [
+    react(),
+    convexTestProviderPlugin(),  // resolves @convex-dev/auth internal import
+  ],
+  // ... rest of config unchanged
+});
+```
+
+### Usage
 
 ```tsx
 import { renderWithConvexAuth } from "convex-test-provider";
@@ -125,14 +212,24 @@ renderWithConvexAuth(<App />, client, { authenticated: false });
 
 `renderWithConvexAuth` wraps your component with both auth state (so `<Authenticated>`, `<Unauthenticated>`, and `useConvexAuth()` work) and auth actions context (so `useAuthActions()` works). Calling `signIn()` sets auth to true; calling `signOut()` sets auth to false — the view re-renders accordingly.
 
+### Complete auth test example
+
 ```tsx
-// Test sign-out toggles the view
-renderWithConvexAuth(<App />, client);
-await user.click(screen.getByRole("button", { name: /sign out/i }));
-expect(screen.getByText("Please sign in")).toBeInTheDocument();
+import { test, renderWithConvexAuth } from "../../convex/test.setup";
+import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { expect } from "vitest";
+
+test("sign out toggles the view", async ({ client }) => {
+  const user = userEvent.setup();
+  renderWithConvexAuth(<App />, client);
+
+  await user.click(screen.getByRole("button", { name: /sign out/i }));
+  expect(await screen.findByText("Please sign in")).toBeInTheDocument();
+});
 ```
 
-To simulate sign-in errors (e.g. test `.catch()` branches):
+### Sign-in error simulation
 
 ```tsx
 renderWithConvexAuth(<App />, client, {
@@ -141,7 +238,7 @@ renderWithConvexAuth(<App />, client, {
 });
 ```
 
-For custom wrapping, use `ConvexTestAuthProvider` directly:
+### Direct `ConvexTestAuthProvider` (custom wrapping)
 
 ```tsx
 import { ConvexTestAuthProvider } from "convex-test-provider";
@@ -150,6 +247,66 @@ import { ConvexTestAuthProvider } from "convex-test-provider";
   <YourComponent />
 </ConvexTestAuthProvider>
 ```
+
+## Vitest Configuration Reference
+
+### Minimal config (no auth)
+
+```typescript
+import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    environment: "jsdom",
+    environmentMatchGlobs: [["convex/**", "edge-runtime"]],
+    server: { deps: { inline: ["convex-test"] } },
+    globals: true,
+    setupFiles: ["./src/test-setup.ts"],
+  },
+});
+```
+
+### With auth testing
+
+```typescript
+import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
+import { convexTestProviderPlugin } from "convex-test-provider/vitest-plugin";
+
+export default defineConfig({
+  plugins: [react(), convexTestProviderPlugin()],
+  test: {
+    environment: "jsdom",
+    environmentMatchGlobs: [["convex/**", "edge-runtime"]],
+    server: { deps: { inline: ["convex-test"] } },
+    globals: true,
+    setupFiles: ["./src/test-setup.ts"],
+  },
+});
+```
+
+### Config options explained
+
+| Option | Why |
+|--------|-----|
+| `react()` | JSX transform for test files |
+| `environment: "jsdom"` | DOM APIs for React component tests |
+| `environmentMatchGlobs` | Convex functions run in edge runtime, not jsdom |
+| `server.deps.inline: ["convex-test"]` | convex-test must be inlined for Vitest to resolve it |
+| `setupFiles` | Load jest-dom matchers (`toBeInTheDocument()`, etc.) |
+| `convexTestProviderPlugin()` | Resolves `@convex-dev/auth` internal import (auth testing only) |
+
+## Agent Skills
+
+Install skills for AI coding agents via [skills.sh](https://skills.sh):
+
+```bash
+npx skills add siraj-samsudeen/convex-test-provider
+```
+
+This installs three skills: `setup-convex-testing`, `add-convex-auth-testing`, and `convex-test-patterns`.
 
 ## Limitations
 
