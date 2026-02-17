@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1]
+
 ### Fixed
 
-- Cache collision when multiple `useQuery` calls share a component — different query references (e.g. `api.items.list` and `api.todos.list`) now get separate cache entries instead of overwriting each other (#2)
+- `renderWithConvexAuth`, `renderWithConvex`, and `wrapWithConvex` now accept `convexTest()` return value directly — no `as unknown as ConvexTestClient` cast needed (#10)
+- Cache collision when multiple `useQuery` calls share a component — different query references now get separate cache entries (#2)
 - `seed` fixture now respects explicit `userId` in data instead of always overwriting with the default user (#8)
 - `createUser` now exposes `userId` on the returned client for multi-user test scenarios (#8)
 
@@ -20,7 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Limitations section in README — documents one-shot query model and upstream `convex-test` auth context limitation with workarounds and upstream issue link (#7)
+- `convexTestProviderPlugin()` — Vitest plugin that auto-resolves the `@convex-dev/auth` internal import (#9)
+- Limitations section in README — documents one-shot query model and upstream `convex-test` auth context limitation (#7)
 
 ## [0.3.0]
 
