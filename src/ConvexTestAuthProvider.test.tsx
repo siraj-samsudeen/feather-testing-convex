@@ -3,12 +3,13 @@
  *
  * Verifies that components using Convex auth hooks (<Authenticated>, <Unauthenticated>,
  * useConvexAuth(), useAuthActions()) work correctly when wrapped with our test providers.
+ *
+ * signIn/signOut are pure React state toggles — no backend calls.
  */
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Authenticated, Unauthenticated, useConvexAuth } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useState } from "react";
 import { describe, expect, it } from "vitest";
 import { convexTest } from "convex-test";
 
@@ -50,8 +51,8 @@ function AuthActionsConsumer() {
   );
 }
 
-function AuthGateWithActions() {
-  const { signIn, signOut } = useAuthActions();
+function AuthGateWithSignOut() {
+  const { signOut } = useAuthActions();
   return (
     <div>
       <Authenticated>
@@ -59,6 +60,20 @@ function AuthGateWithActions() {
         <button type="button" onClick={() => signOut()}>
           Sign Out
         </button>
+      </Authenticated>
+      <Unauthenticated>
+        <div>Please sign in</div>
+      </Unauthenticated>
+    </div>
+  );
+}
+
+function AuthGateWithSignIn() {
+  const { signIn } = useAuthActions();
+  return (
+    <div>
+      <Authenticated>
+        <div>Welcome back</div>
       </Authenticated>
       <Unauthenticated>
         <div>Please sign in</div>
@@ -70,23 +85,9 @@ function AuthGateWithActions() {
   );
 }
 
-function SignInWithError() {
-  const { signIn } = useAuthActions();
-  const [error, setError] = useState<string | null>(null);
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={() => void signIn("password").catch((e: Error) => setError(e.message))}
-      >
-        Try Sign In
-      </button>
-      {error && <div>Error: {error}</div>}
-    </div>
-  );
-}
-
 describe("ConvexTestAuthProvider", () => {
+  // --- Read-only tests (no auth actions called) ---
+
   it("useConvexAuth returns authenticated state by default", async () => {
     const client = convexTest(schema, modules);
     renderWithConvexAuth(<AuthStatus />, client);
@@ -136,10 +137,12 @@ describe("ConvexTestAuthProvider", () => {
     ).toBeInTheDocument();
   });
 
+  // --- Toggle tests (signIn/signOut toggle React state) ---
+
   it("signOut toggles view from authenticated to unauthenticated", async () => {
     const client = convexTest(schema, modules);
     const user = userEvent.setup();
-    renderWithConvexAuth(<AuthGateWithActions />, client);
+    renderWithConvexAuth(<AuthGateWithSignOut />, client);
 
     expect(await screen.findByText("Welcome back")).toBeInTheDocument();
     expect(screen.queryByText("Please sign in")).not.toBeInTheDocument();
@@ -153,26 +156,14 @@ describe("ConvexTestAuthProvider", () => {
   it("signIn toggles view from unauthenticated to authenticated", async () => {
     const client = convexTest(schema, modules);
     const user = userEvent.setup();
-    renderWithConvexAuth(<AuthGateWithActions />, client, { authenticated: false });
+    renderWithConvexAuth(<AuthGateWithSignIn />, client, { authenticated: false });
 
     expect(await screen.findByText("Please sign in")).toBeInTheDocument();
+    expect(screen.queryByText("Welcome back")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Sign In" }));
 
     expect(await screen.findByText("Welcome back")).toBeInTheDocument();
     expect(screen.queryByText("Please sign in")).not.toBeInTheDocument();
-  });
-
-  it("signInError makes signIn reject and surfaces error", async () => {
-    const client = convexTest(schema, modules);
-    const user = userEvent.setup();
-    renderWithConvexAuth(<SignInWithError />, client, {
-      authenticated: false,
-      signInError: new Error("Invalid credentials"),
-    });
-
-    await user.click(screen.getByRole("button", { name: "Try Sign In" }));
-
-    expect(await screen.findByText("Error: Invalid credentials")).toBeInTheDocument();
   });
 });

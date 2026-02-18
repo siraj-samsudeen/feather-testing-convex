@@ -1,10 +1,13 @@
 import { useCallback, useMemo, useRef, type ReactNode } from "react";
 import { ConvexProvider, ConvexProviderWithAuth } from "convex/react";
 
-/** Minimal client shape: one-shot query and mutation. Matches convex-test client. */
+/** Minimal client shape: one-shot query, mutation, action, plus identity injection. Matches convex-test client. */
 export interface ConvexTestClient {
   query: (query: unknown, args: unknown) => Promise<unknown>;
   mutation: (mutation: unknown, args: unknown) => Promise<unknown>;
+  action: (action: unknown, args: unknown) => Promise<unknown>;
+  run: (fn: (ctx: any) => Promise<any>) => Promise<any>;
+  withIdentity: (identity: Record<string, unknown>) => ConvexTestClient;
 }
 
 /**

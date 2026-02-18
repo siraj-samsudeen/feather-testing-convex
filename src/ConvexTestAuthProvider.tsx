@@ -1,8 +1,9 @@
 // TODO: Replace with public export when @convex-dev/auth provides one.
 // Track: https://github.com/get-convex/convex-auth — request exported TestAuthProvider or context.
+import { useState, type ReactNode } from "react";
+
 // @ts-expect-error — internal path not in package exports; works at runtime via bundler
 import { ConvexAuthActionsContext } from "@convex-dev/auth/dist/react/client.js";
-import { useState, type ReactNode } from "react";
 
 import { ConvexTestProvider, type ConvexTestClient } from "./ConvexTestProvider.js";
 
@@ -11,9 +12,9 @@ import { ConvexTestProvider, type ConvexTestClient } from "./ConvexTestProvider.
  * (ConvexAuthActionsContext), so components using <Authenticated>, <Unauthenticated>,
  * useConvexAuth(), and useAuthActions() all work in tests.
  *
- * Like Phoenix's log_in_user(conn, user) — signIn/signOut toggle real auth state.
- * signIn sets authenticated=true, signOut sets authenticated=false.
- * Pass signInError to simulate sign-in failures (triggers .catch() in consuming code).
+ * signIn/signOut are pure React state toggles — no backend calls.
+ * For auth-dependent queries, use `client.withIdentity()` to inject identity
+ * so `getAuthUserId(ctx)` returns a valid user ID.
  */
 export function ConvexTestAuthProvider({
   client,
@@ -24,6 +25,7 @@ export function ConvexTestAuthProvider({
   client: ConvexTestClient;
   children: ReactNode;
   authenticated?: boolean;
+  /** When set, signIn() rejects with this error instead of toggling state. */
   signInError?: Error;
 }) {
   const [isAuth, setIsAuth] = useState(authenticated);
