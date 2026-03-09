@@ -1,6 +1,6 @@
 {
   "name": "feather-testing-convex",
-  "version": "0.4.4",
+  "version": "0.5.0",
   "description": "React provider that adapts convex-test's one-shot client for use with ConvexProvider, so useQuery/useMutation work in tests.",
   "license": "MIT",
   "keywords": [
@@ -42,6 +42,11 @@
       "types": "./dist/rtl/index.d.ts",
       "import": "./dist/rtl/index.js",
       "default": "./dist/rtl/index.js"
+    },
+    "./tanstack-query": {
+      "types": "./dist/tanstack-query.d.ts",
+      "import": "./dist/tanstack-query.js",
+      "default": "./dist/tanstack-query.js"
     }
   },
   "files": [
@@ -49,7 +54,9 @@
   ],
   "peerDependencies": {
     "@convex-dev/auth": ">=0.0.80",
+    "@convex-dev/react-query": ">=0.1.0",
     "@playwright/test": ">=1.40.0",
+    "@tanstack/react-query": ">=5.0.0",
     "@testing-library/react": ">=14.0.0",
     "@testing-library/user-event": ">=14.0.0",
     "convex": ">=1.0.0",
@@ -61,7 +68,13 @@
     "@convex-dev/auth": {
       "optional": true
     },
+    "@convex-dev/react-query": {
+      "optional": true
+    },
     "@playwright/test": {
+      "optional": true
+    },
+    "@tanstack/react-query": {
       "optional": true
     },
     "@testing-library/react": {
@@ -81,7 +94,9 @@
   },
   "devDependencies": {
     "@convex-dev/auth": "^0.0.90",
+    "@convex-dev/react-query": "^0.1.0",
     "@playwright/test": "^1.58.2",
+    "@tanstack/react-query": "^5.90.21",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

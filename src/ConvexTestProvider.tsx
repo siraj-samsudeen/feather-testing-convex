@@ -67,6 +67,9 @@ export function ConvexTestProvider({
     mutation: (mutation: unknown, args: unknown) => {
       return client.mutation(mutation as never, args ?? {});
     },
+    action: (action: unknown, args: unknown) => {
+      return client.action(action as never, args ?? {});
+    },
     // Synchronous — real client calls onChange async, but ConvexProviderWithAuth
     // calls setAuth inside useEffect (committed state), so sync is safe here.
     setAuth: (_fetchToken: unknown, onChange: (isAuth: boolean) => void) => {

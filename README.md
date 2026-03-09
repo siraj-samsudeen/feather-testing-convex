@@ -581,6 +581,94 @@ test("adds an item", async ({ client }) => {
 
 ---
 
+### 11. TanStack React Query Components
+
+Test components that use `@tanstack/react-query` with `@convex-dev/react-query` bridge — i.e., `useQuery(convexQuery(...))` instead of Convex's `useQuery`.
+
+**The Problem:** Components using `convexQuery()` get `undefined` data with the basic `ConvexTestProvider` because TanStack Query needs its own `QueryClientProvider` and `queryFn`.
+
+**The Solution:** Use `feather-testing-convex/tanstack-query` — it provides a custom `queryFn` that routes Convex query keys to the in-memory test backend.
+
+#### Setup
+
+```bash
+npm install -D @tanstack/react-query @convex-dev/react-query
+```
+
+```typescript
+// convex/test.setup.ts
+import { createConvexTest } from "feather-testing-convex";
+import { renderWithConvexQuery, renderWithConvexQueryAuth } from "feather-testing-convex/tanstack-query";
+import schema from "./schema";
+
+export const modules = import.meta.glob("./**/!(*.*.*)*.*s");
+export const test = createConvexTest(schema, modules);
+export { renderWithConvexQuery, renderWithConvexQueryAuth };
+```
+
+#### Basic Query Test
+
+```tsx
+import { useQuery } from "@tanstack/react-query";
+import { convexQuery } from "@convex-dev/react-query";
+
+function UserProfile() {
+  const { data: user } = useQuery(convexQuery(api.app.getCurrentUser, {}));
+  if (!user) return <div>Loading...</div>;
+  return <h1>Welcome, {user.username}</h1>;
+}
+
+test("shows user profile", async ({ client, testClient, userId }) => {
+  await testClient.run(async (ctx) => ctx.db.patch(userId, { username: "alice" }));
+  renderWithConvexQueryAuth(<UserProfile />, client);
+  expect(await screen.findByText("Welcome, alice")).toBeInTheDocument();
+});
+```
+
+#### Mutation with Auto-Refresh (Key Advantage!)
+
+Unlike the base `ConvexTestProvider` (one-shot), the TanStack Query provider **auto-invalidates queries after mutations**. The UI updates without re-mounting:
+
+```tsx
+function TodoApp() {
+  const { data: todos } = useQuery(convexQuery(api.todos.list, {}));
+  const addTodo = useMutation(api.todos.create);  // convex/react useMutation
+  if (!todos) return <div>Loading...</div>;
+  return (
+    <div>
+      <ul>{todos.map(t => <li key={t._id}>{t.text}</li>)}</ul>
+      <button onClick={() => addTodo({ text: "New todo" })}>Add</button>
+    </div>
+  );
+}
+
+test("adds todo and UI updates automatically", async ({ client }) => {
+  const user = userEvent.setup();
+  renderWithConvexQueryAuth(<TodoApp />, client);
+
+  await user.click(screen.getByRole("button", { name: "Add" }));
+
+  // ✅ UI auto-updates — no re-mount needed!
+  expect(await screen.findByText("New todo")).toBeInTheDocument();
+});
+```
+
+#### Auth-Aware Tests
+
+```tsx
+test("authenticated user sees their data", async ({ client }) => {
+  renderWithConvexQueryAuth(<UserProfile />, client);
+  expect(await screen.findByText(/Welcome/)).toBeInTheDocument();
+});
+
+test("unauthenticated user sees nothing", async ({ testClient }) => {
+  renderWithConvexQuery(<UserProfile />, testClient);
+  expect(await screen.findByText("Loading...")).toBeInTheDocument();
+});
+```
+
+---
+
 ## Fixtures Reference
 
 `createConvexTest(schema, modules, options?)` returns a custom Vitest `test` function with these fixtures:
@@ -617,6 +705,17 @@ export const test = createConvexTest(schema, modules, { usersTable: "profiles" }
 | `wrapWithConvex(children, client)` | JSX wrapper — returns `<ConvexTestProvider>` element for custom rendering setups. |
 | `ConvexTestProvider` | React component. Wraps children with a fake Convex client. Props: `client`, `children`, `authenticated?`. |
 | `ConvexTestAuthProvider` | React component. Wraps with auth state + auth actions context. Props: `client`, `children`, `authenticated?`, `signInError?`. |
+
+### TanStack Query (`feather-testing-convex/tanstack-query`)
+
+| Export | Description |
+|--------|-------------|
+| `renderWithConvexQuery(ui, client)` | Render with `QueryClientProvider` + `ConvexProvider`. For components using `useQuery(convexQuery(...))`. |
+| `renderWithConvexQueryAuth(ui, client, options?)` | Auth-aware version. Supports `authenticated` and `signInError` options. |
+| `ConvexTestQueryProvider` | React component. Wraps with `QueryClientProvider` + `ConvexProvider` with auto query invalidation. Props: `client`, `children`, `authenticated?`. |
+| `ConvexTestQueryAuthProvider` | React component. Auth-aware version with `signIn`/`signOut` context. Props: `client`, `children`, `authenticated?`, `signInError?`. |
+| `createTestQueryFn(client)` | Custom `queryFn` for advanced `QueryClient` setup. Routes `["convexQuery", ...]` keys to the test backend. |
+| `createTestQueryClient(client)` | Pre-configured `QueryClient` factory (`retry: false`, `gcTime: Infinity`, custom `queryFn`). |
 
 ### Vitest Plugin (`feather-testing-convex/vitest-plugin`)
 
@@ -792,6 +891,21 @@ export const test = createConvexTest(schema, modules);
 export { renderWithConvex, renderWithConvexAuth, renderWithSession };
 ```
 
+### For TanStack Query Apps
+
+If your app uses `@tanstack/react-query` + `@convex-dev/react-query`, add:
+
+```typescript
+/// <reference types="vite/client" />
+import { createConvexTest } from "feather-testing-convex";
+import { renderWithConvexQuery, renderWithConvexQueryAuth } from "feather-testing-convex/tanstack-query";
+import schema from "./schema";
+
+export const modules = import.meta.glob("./**/!(*.*.*)*.*s");
+export const test = createConvexTest(schema, modules);
+export { renderWithConvexQuery, renderWithConvexQueryAuth };
+```
+
 ---
 
 ## Playwright E2E Tests
@@ -832,9 +946,9 @@ The Playwright `test` fixture provides:
 
 ## Limitations
 
-### One-Shot Query Execution (Non-Reactive)
+### One-Shot Query Execution (Non-Reactive) — `ConvexTestProvider` only
 
-Queries resolve **once** at component mount. After a mutation, the UI does not automatically re-render with updated data. This adapter does not simulate Convex's reactive subscription model.
+When using `ConvexTestProvider` / `renderWithConvex`, queries resolve **once** at component mount. After a mutation, the UI does not automatically re-render with updated data.
 
 **To verify backend state after a mutation:**
 ```tsx
@@ -851,6 +965,8 @@ unmount();
 renderWithConvex(<TodoList />, client);
 expect(await screen.findByText("New todo")).toBeInTheDocument();
 ```
+
+> **Note:** This limitation does **not** apply to the TanStack Query provider (`ConvexTestQueryProvider` / `renderWithConvexQuery`). Those automatically invalidate queries after mutations, so the UI updates without re-mounting.
 
 ### Nested `runQuery`/`runMutation` Lose Auth Context
 

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0]
+
+### Added
+
+- **TanStack React Query support** — new sub-path export `feather-testing-convex/tanstack-query` for apps using `@tanstack/react-query` + `@convex-dev/react-query` bridge
+  - `ConvexTestQueryProvider` — wraps `QueryClientProvider` + `ConvexProvider` with auto query invalidation after mutations
+  - `ConvexTestQueryAuthProvider` — auth-aware version with `signIn`/`signOut` and `ConvexAuthActionsContext`
+  - `renderWithConvexQuery(ui, client)` — render helper for TanStack Query components
+  - `renderWithConvexQueryAuth(ui, client, options?)` — auth-aware render helper
+  - `createTestQueryFn(client)` — custom queryFn for advanced QueryClient setup
+  - `createTestQueryClient(client)` — pre-configured QueryClient factory
+- `action` method on `ConvexTestProvider`'s fake client — components using `useConvexAction` / `useAction` from `convex/react` now work in tests
+- `@tanstack/react-query` and `@convex-dev/react-query` as optional peer dependencies
+
+### Key Feature: Auto Query Invalidation
+
+Unlike the base `ConvexTestProvider` (one-shot queries), the TanStack Query provider **automatically invalidates all Convex queries after mutations and actions**. This means UI updates after mutations in tests — no need to re-mount components or query the backend directly.
+
 ## [0.3.1]
 
 ### Fixed
