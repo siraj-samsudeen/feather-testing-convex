@@ -31,6 +31,31 @@ test("shows todos", async ({ client, seed }) => {
 });
 ```
 
+### The MECE Testing Principle
+
+MECE (**Mutually Exclusive, Collectively Exhaustive**) is a decomposition principle from McKinsey consulting: break a problem into buckets where nothing overlaps and nothing is missed. Applied to testing: decompose your component into **visual states**, then write **one test per state**. Within each test, assert as many aspects of that state as needed.
+
+```tsx
+function TodoList() {
+  const todos = useQuery(api.todos.list);
+  if (todos === undefined) return <div>Loading...</div>;       // State 1: Mock
+  if (todos.length === 0) return <div>No todos yet</div>;      // State 2: Integration
+  return <ul>{todos.map(t => <li key={t._id}>{t.text}</li>)}</ul>;  // State 3: Integration
+}
+```
+
+**3 states → 3 tests → 100% coverage → zero overlap:**
+
+| State (bucket) | Approach | Why |
+|----------------|----------|-----|
+| Loading spinner | **Mock** | Transient — query resolves too fast to observe |
+| Empty list | **Integration** | Real query returns `[]` naturally |
+| With data | **Integration** | Real query returns real data |
+
+**Integration is the default. Mocks are the exception** — only for transient states (loading spinners) and error states that can't be produced from a real backend. Never mock `useQuery` to return data you could seed instead.
+
+> 📖 **Full guide:** [TESTING-PHILOSOPHY.md](TESTING-PHILOSOPHY.md) — the MECE framework, decision tree, test matrix workflow, naming convention, anti-pattern examples, 12-point review checklist, and coverage rules.
+
 ---
 
 ## Quick Start
@@ -941,7 +966,7 @@ This installs all feather-flow skills including:
 |-------|------------|----------------|
 | `/feather:setup-convex-testing` | No test config, or config errors | vitest.config.ts, convex/test.setup.ts, Convex deps |
 | `/feather:add-convex-auth-testing` | Components use auth hooks | vitest plugin, renderWithConvexAuth, @convex-dev/auth |
-| `/feather:review-convex-tests` | After writing any test | 10-point quality checklist for test files |
+| `/feather:review-convex-tests` | After writing any test | 12-point quality checklist for test files |
 
 **Sequence:** setup-react-testing → setup-convex-testing → (if auth) add-convex-auth-testing → write tests → review-convex-tests
 
