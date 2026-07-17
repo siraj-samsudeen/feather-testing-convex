@@ -1,6 +1,6 @@
 # Feather Testing Philosophy
 
-The canonical guide to testing React + Convex applications with `feather-testing-convex`. This document is the single source of truth — all other references (feather-flow skills, project READMEs) should link here.
+The canonical guide to testing React + Convex applications with `feather-testing-convex`. This document is the single source of truth — all other references (feather-skills, project READMEs) should link here.
 
 ---
 
